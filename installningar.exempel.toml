@@ -1,0 +1,50 @@
+# Inställningar för daglig.py. Första körningen kopieras den här filen till
+# private/installningar.toml – ändra i den, inte här.
+
+# Län att söka i (Platsbankens koncept-id). Ta bort raden helt för hela Sverige.
+#   oDpK_oZ2_WYt = Dalarnas län
+lan = ["oDpK_oZ2_WYt"]
+
+# Yrkesområden att söka i. Kommentera bort eller lägg till fler.
+yrkesomraden = [
+    "yhCP_AqT_tns",  # Installation, drift, underhåll (elektriker, mekaniker, underhåll)
+    "6Hq3_tKo_V57",  # Yrken med teknisk inriktning (tekniker, automation)
+    "wTEr_CBC_bqh",  # Industriell tillverkning (operatör, montör, produktion)
+    "apaJ_2ja_LuF",  # Data/IT (support, drift)
+    "ASGV_zcE_bWf",  # Transport, distribution, lager
+    "j7Cq_ZJe_GkT",  # Bygg och anläggning
+    # "RPTn_bxG_ExZ",  # Försäljning, inköp, marknadsföring
+    # "ScKy_FHB_7wT",  # Hotell, restaurang, storhushåll
+    # "whao_Q6A_ScE",  # Sanering och renhållning
+    # "VuuL_7CH_adj",  # Naturbruk
+]
+
+# Körkort du har. Annonser som kräver något annat sorteras bort direkt.
+korkort = ["B"]
+
+# Fritext som AI:n tar hänsyn till när den sållar.
+onskemal = """
+Öppen för många olika jobb, inte bara som elektriker: allt där teknik, felsökning,
+maskiner, fordon, elektronik eller datorer ingår, men även andra jobb som en
+nyexaminerad kan få.
+Själva arbetsplatsen ska ligga i Dalarna (bemanningsföretag har ibland kontor här men
+jobbet på annan ort – sortera bort sådana).
+"""
+
+# Brev skrivs bara till annonser med minst så här hög poäng (1–10).
+min_poang = 7
+
+# Om den snabba modellen sorterar bort en annons som ändå fått minst så här hög
+# poäng, får den noggranna modellen bedöma den en gång till.
+dubbelkolla_fran_poang = 5
+
+# Max antal brev per körning (resten väntar till nästa gång).
+max_brev_per_korning = 5
+
+# Hur många dagar bakåt första körningen tittar (60 = i praktiken alla öppna annonser).
+# Senare körningar tittar 3 dagar bakåt och hoppar över annonser som redan bedömts.
+forsta_korningen_dagar = 60
+
+# Modeller: snabb för att sålla, noggrann för breven.
+modell_matchning = "deepseek-chat"
+modell_brev = "deepseek-reasoner"
