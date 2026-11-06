@@ -33,7 +33,7 @@ def las_installningar():
         PRIVAT.mkdir(exist_ok=True)
         shutil.copy(ROOT / "installningar.exempel.toml", INSTALLNINGAR)
         print(f"Skapade {INSTALLNINGAR.relative_to(ROOT)} – ändra där om du vill söka annorlunda.")
-    return tomllib.loads(INSTALLNINGAR.read_text(encoding="utf-8"))
+    return tomllib.loads(INSTALLNINGAR.read_text(encoding="utf-8-sig"))
 
 
 def las_sedda():

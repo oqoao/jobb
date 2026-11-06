@@ -78,7 +78,7 @@ def annons_som_text(a):
 
 def fraga_deepseek(system_prompt, meddelande, modell, json_svar=False, temperatur=None):
     nyckelfil = PRIVAT / "deepseek_nyckel.txt"
-    nyckel = os.environ.get("DEEPSEEK_API_KEY") or (nyckelfil.exists() and nyckelfil.read_text().strip())
+    nyckel = os.environ.get("DEEPSEEK_API_KEY") or (nyckelfil.exists() and nyckelfil.read_text(encoding="utf-8-sig").strip())
     if not nyckel:
         raise DeepSeekFel("Hittar ingen DeepSeek-nyckel. Lägg den i private/deepseek_nyckel.txt "
                           "eller sätt DEEPSEEK_API_KEY (nyckeln får du på platform.deepseek.com).")
