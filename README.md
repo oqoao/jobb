@@ -35,7 +35,7 @@ The same search and rating without the page. It also writes letters automaticall
 python daglig.py
 ```
 
-1. Fetches new ads in your county and job areas. The first run looks at every open ad; later runs look 3 days back and skip ads already judged (`private/sedda.json`).
+1. Fetches new ads in your county and job areas. The first run looks at every open ad; later runs look back to the last run (at least 3 days) and skip ads already judged (`private/sedda.json`).
 2. Drops ads that require a licence you don't have (straight from the ad's data).
 3. A fast model (`deepseek-chat`) drops ads that require years of experience, certificates, a degree, or a workplace outside your area, and scores the rest 1–10. If it drops an ad that still scored 5 or higher, the careful model (`deepseek-reasoner`) judges it again, so good jobs aren't lost by mistake.
 4. Writes letters for up to 5 of the best matches (7/10 or higher), most urgent deadline first. The same ad posted for several towns gets one letter. The rest wait for the next run.

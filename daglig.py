@@ -46,9 +46,18 @@ def spara_sedda(sedda):
     tmp.replace(SEDDA)
 
 
+def dagar_bakat(inst, sedda):
+    """Första gången: alla öppna annonser. Sedan: tillbaka till senaste körningen, plus marginal."""
+    max_dagar = inst.get("forsta_korningen_dagar", 60)
+    if not sedda:
+        return max_dagar
+    senast = max(datetime.date.fromisoformat(s["datum"]) for s in sedda.values())
+    return min(max_dagar, max(3, (datetime.date.today() - senast).days + 2))
+
+
 def hamta_nya(inst, sedda, dagar=None):
     if dagar is None:
-        dagar = 3 if sedda else inst.get("forsta_korningen_dagar", 60)
+        dagar = dagar_bakat(inst, sedda)
     params = {"published-after": dagar * 24 * 60}
     if inst.get("lan"):
         params["region"] = inst["lan"]
