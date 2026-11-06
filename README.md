@@ -10,7 +10,26 @@ Finds jobs on Platsbanken (Arbetsförmedlingen), drops the ones you can't get, a
 2. Get an API key at <https://platform.deepseek.com> and put it in `private/deepseek_nyckel.txt` (or set `DEEPSEEK_API_KEY`).
 3. `pip install requests` (Python 3.11 or newer).
 
+## The job page: `sida.py`
+
+On Windows, double-click `starta_sida.bat`. Elsewhere:
+
+```bash
+python sida.py
+```
+
+A page opens in your browser at <http://localhost:8000>. It finds new ads by itself (county, job areas and wishes from `private/installningar.toml`), lets the AI rate them, and lists every open job from best to worst match. Ads the AI dropped are in a folded section at the bottom, each with the reason.
+
+On each job you can:
+- **Skriv brev** writes a letter (about a minute) and shows it in a popup with a copy button. Once written, the button says **Visa brev** and opens the saved letter without spending tokens.
+- **Visa annons** shows the ad text.
+- **Inte intressant** hides the job for good.
+
+Ads already rated are never rated again, so opening the page costs nothing when there are no new ads. Close the black window to stop the page.
+
 ## Every day: `daglig.py`
+
+The same search and rating without the page. It also writes letters automatically for the best matches.
 
 ```bash
 python daglig.py

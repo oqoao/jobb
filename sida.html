@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jobb för dig</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --kort: #ffffff; --text: #1b1f24; --dampad: #5c6670; --kant: #dde1e6;
+    --accent: #1f6feb; --accent-text: #ffffff; --bra: #1a7f37; --bra-bg: #dafbe1;
+    --mellan: #9a6700; --mellan-bg: #fff8c5; --bort: #6e7781; --bort-bg: #eef1f4; --ny: #8250df; --ny-bg: #fbefff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --kort: #161b22; --text: #e6edf3; --dampad: #8d96a0; --kant: #30363d;
+      --accent: #4493f8; --accent-text: #0d1117; --bra: #3fb950; --bra-bg: #12261e;
+      --mellan: #d29922; --mellan-bg: #272115; --bort: #8d96a0; --bort-bg: #21262d; --ny: #ab7df8; --ny-bg: #231a33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  h1 { margin: 0; font-size: 1.6rem; }
+  #status { color: var(--dampad); margin: 4px 0 20px; min-height: 1.5em; }
+  button, .lank { font: inherit; font-size: .92rem; padding: 7px 13px; border-radius: 8px; cursor: pointer;
+                  border: 1px solid var(--kant); background: var(--kort); color: var(--text); text-decoration: none; }
+  button.primar { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button.tyst { border-color: transparent; color: var(--dampad); background: none; }
+  button:disabled { opacity: .6; cursor: progress; }
+  .kort { background: var(--kort); border: 1px solid var(--kant); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .topp { display: flex; gap: 10px; align-items: flex-start; }
+  .kort h2 { font-size: 1.05rem; margin: 0; flex: 1; }
+  .meta { color: var(--dampad); margin: 2px 0 6px; font-size: .92rem; }
+  .ai { font-size: .9rem; margin: 4px 0; }
+  .saknas { font-size: .85rem; color: var(--dampad); margin: 2px 0 10px; }
+  .bricka { flex: none; font-size: .8rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .bricka.bra { color: var(--bra); background: var(--bra-bg); }
+  .bricka.mellan { color: var(--mellan); background: var(--mellan-bg); }
+  .bricka.bort { color: var(--bort); background: var(--bort-bg); }
+  .bricka.ny { color: var(--ny); background: var(--ny-bg); }
+  .knappar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .annonstext { white-space: pre-wrap; font-size: .92rem; border-top: 1px solid var(--kant); margin-top: 12px; padding-top: 12px; }
+  .fel { color: #cf222e; font-size: .9rem; margin-top: 8px; }
+  #bortsorterade { margin-top: 28px; }
+  #bortsorterade > summary { cursor: pointer; color: var(--dampad); margin-bottom: 12px; }
+  #bortsorterade .kort { opacity: .8; }
+  dialog { width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 48px); border: 1px solid var(--kant);
+           border-radius: 12px; padding: 20px; background: var(--kort); color: var(--text); }
+  dialog::backdrop { background: rgb(0 0 0 / .5); }
+  dialog h2 { margin: 0 0 4px; font-size: 1.15rem; }
+  #brevtext { white-space: pre-wrap; border: 1px solid var(--kant); border-radius: 8px; padding: 14px;
+              margin: 12px 0; background: var(--bg); max-height: 55vh; overflow: auto; }
+  dialog details { color: var(--dampad); font-size: .9rem; margin-bottom: 12px; }
+  dialog li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Jobb för dig</h1>
+    <button id="uppdatera">Leta efter nya annonser</button>
+  </header>
+  <div id="status">Laddar …</div>
+  <div id="lista"></div>
+  <details id="bortsorterade" hidden>
+    <summary></summary>
+    <div id="bortlista"></div>
+  </details>
+</main>
+
+<dialog id="brevruta">
+  <h2 id="brevrubrik"></h2>
+  <div class="meta" id="brevfil"></div>
+  <div id="brevtext"></div>
+  <details id="andringar"><summary></summary><ul></ul></details>
+  <div class="knappar">
+    <button class="primar" id="kopiera">Kopiera brevet</button>
+    <button id="stang">Stäng</button>
+  </div>
+</dialog>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const el = (tagg, egenskaper = {}, ...barn) => {
+  const e = document.createElement(tagg);
+  Object.assign(e, egenskaper);
+  e.append(...barn.filter((b) => b !== null && b !== undefined && b !== ""));
+  return e;
+};
+const post = (url) => fetch(url, { method: "POST", headers: { "X-Jobb": "1" } });
+
+function bricka(a) {
+  if (a.status === "bortsorterad") return el("span", { className: "bricka bort", textContent: "Passar inte" });
+  const klass = a.poang >= 7 ? "bra" : a.poang >= 5 ? "mellan" : "bort";
+  return el("span", { className: "bricka " + klass, textContent: (a.poang || "–") + "/10" });
+}
+
+function kort(a) {
+  const text = el("div", { className: "annonstext", hidden: true });
+  const visa = el("button", { textContent: "Visa annons" });
+  visa.onclick = async () => {
+    if (!text.textContent) {
+      visa.disabled = true; visa.textContent = "Hämtar …";
+      try { text.textContent = (await (await fetch("/api/annons/" + a.id)).json()).text || "Ingen text."; }
+      catch { text.textContent = "Kunde inte hämta annonsen."; }
+      visa.disabled = false;
+    }
+    text.hidden = !text.hidden;
+    visa.textContent = text.hidden ? "Visa annons" : "Dölj annons";
+  };
+  const fel = el("div", { className: "fel", hidden: true });
+  const brevknapp = el("button", { className: "primar", textContent: a.har_brev ? "Visa brev" : "Skriv brev" });
+  brevknapp.onclick = () => hamtaBrev(a, brevknapp, fel);
+  const dolj = el("button", { className: "tyst", textContent: "Inte intressant", title: "Dölj annonsen för gott" });
+  dolj.onclick = async () => { await post("/api/dolj/" + a.id); kortet.remove(); };
+  const meta = [a.arbetsgivare, a.ort, a.sista_dag && "sista dag " + a.sista_dag].filter(Boolean).join(" · ");
+  const kortet = el("article", { className: "kort" },
+    el("div", { className: "topp" }, bricka(a), el("h2", { textContent: a.rubrik }),
+       a.ny ? el("span", { className: "bricka ny", textContent: "Ny" }) : null),
+    el("div", { className: "meta", textContent: meta }),
+    a.varfor ? el("div", { className: "ai", textContent: a.varfor }) : null,
+    a.saknas?.length ? el("div", { className: "saknas", textContent: "Saknas: " + a.saknas.join(", ") }) : null,
+    el("div", { className: "knappar" }, brevknapp, visa,
+       el("a", { className: "lank", href: a.lank, target: "_blank", rel: "noopener", textContent: "Platsbanken ↗" }), dolj),
+    fel, text);
+  return kortet;
+}
+
+async function visaLista() {
+  const data = await (await fetch("/api/lista")).json();
+  const passar = data.annonser.filter((a) => a.status !== "bortsorterad");
+  const bort = data.annonser.filter((a) => a.status === "bortsorterad");
+  $("#lista").replaceChildren(...passar.map(kort));
+  $("#bortlista").replaceChildren(...bort.map(kort));
+  $("#bortsorterade").hidden = bort.length === 0;
+  $("#bortsorterade > summary").textContent =
+    `Sorterades bort – kräver erfarenhet, behörighet eller annat du inte har (${bort.length})`;
+  return passar.length;
+}
+
+async function uppdatera() {
+  const knapp = $("#uppdatera");
+  knapp.disabled = true;
+  $("#status").textContent = "Letar efter nya annonser och låter AI:n betygsätta dem … (kan ta några minuter första gången)";
+  try {
+    const svar = await post("/api/uppdatera");
+    const data = await svar.json();
+    if (!svar.ok) throw new Error(data.fel || svar.statusText);
+    const antal = await visaLista();
+    const nytt = data.pagar ? "En sökning pågår redan." : data.nya ? `${data.nya} nya annonser betygsatta.` : "Inga nya annonser sedan sist.";
+    $("#status").textContent = `${nytt} ${antal} jobb visas, bästa matchning först.` +
+      (data.fel?.length ? ` (${data.fel.length} kunde inte betygsättas – provas igen nästa gång.)` : "");
+  } catch (err) {
+    $("#status").textContent = "Något gick fel: " + err.message;
+  } finally {
+    knapp.disabled = false;
+  }
+}
+
+async function hamtaBrev(a, knapp, fel) {
+  const nytt = !a.har_brev;
+  knapp.disabled = true;
+  knapp.textContent = nytt ? "Skriver brev … (ca 1 min)" : "Hämtar …";
+  fel.hidden = true;
+  try {
+    const svar = nytt ? await post("/api/brev/" + a.id) : await fetch("/api/brev/" + a.id);
+    const data = await svar.json();
+    if (!svar.ok || !data.brev) throw new Error(data.fel || "Inget brev hittades");
+    a.har_brev = true;
+    visaBrev(a, data);
+  } catch (err) {
+    fel.textContent = "Kunde inte skriva brevet: " + err.message;
+    fel.hidden = false;
+  } finally {
+    knapp.disabled = false;
+    knapp.textContent = a.har_brev ? "Visa brev" : "Skriv brev";
+  }
+}
+
+function visaBrev(a, data) {
+  $("#brevrubrik").textContent = `${a.rubrik} – ${a.arbetsgivare}`;
+  $("#brevfil").textContent = "Sparat i " + data.fil;
+  $("#brevtext").textContent = data.brev;
+  const n = data.andringar.length;
+  $("#andringar summary").textContent = n ? `Granskningen ändrade ${n} sak${n > 1 ? "er" : ""}` : "Granskningen hittade inget att ändra";
+  $("#andringar ul").replaceChildren(...data.andringar.map((t) => el("li", { textContent: t.replace(/^- /, "") })));
+  $("#kopiera").textContent = "Kopiera brevet";
+  $("#brevruta").showModal();
+}
+
+$("#kopiera").onclick = async () => {
+  await navigator.clipboard.writeText($("#brevtext").textContent);
+  $("#kopiera").textContent = "Kopierat ✓";
+};
+$("#stang").onclick = () => $("#brevruta").close();
+$("#uppdatera").onclick = uppdatera;
+
+visaLista().then(uppdatera);
+</script>
+</body>
+</html>

@@ -58,6 +58,45 @@ def hamta_nya(inst, sedda, dagar=None):
     return [a for i, a in unika.items() if i not in sedda]
 
 
+def bedom_nya(inst, sedda, dagar=None):
+    """Hämtar annonser som inte bedömts än och låter AI:n bedöma dem.
+    Returnerar (annonserna, nya poster till sedda.json, fel). Ändrar inte sedda."""
+    profil = PROFIL.read_text(encoding="utf-8")
+    # Sållningen klarar sig med en kort profil (billigare) – breven använder hela.
+    kort = PRIVAT / "profil_kort.md"
+    profil_matchning = kort.read_text(encoding="utf-8") if kort.exists() else profil
+    prompt = (ROOT / "prompt_matchning.md").read_text(encoding="utf-8")
+    idag = datetime.date.today().isoformat()
+
+    nya = hamta_nya(inst, sedda, dagar)
+    print(f"{len(nya)} nya annonser att bedöma …")
+
+    def bedom_en(a):
+        try:
+            return a, bedom(a, prompt, profil_matchning, inst), None
+        except (DeepSeekFel, ValueError, KeyError) as e:
+            return a, None, e
+
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        resultat = list(ex.map(bedom_en, nya))
+
+    poster, fel = {}, []
+    for a, b, e in resultat:
+        if e:
+            fel.append(f"{a.get('headline')} – {arbetsgivare(a)}: kunde inte bedömas ({e})")
+            continue
+        if b["sortera_bort"]:
+            status = "bortsorterad"
+        elif b["poang"] >= inst.get("min_poang", 7):
+            status = "vantar"
+        else:
+            status = "lag_poang"
+        poster[a["id"]] = {"datum": idag, "rubrik": a.get("headline"), "arbetsgivare": arbetsgivare(a),
+                           "ort": ort(a), "sista_dag": (a.get("application_deadline") or "")[:10],
+                           "status": status, **b}
+    return nya, poster, fel
+
+
 def bedom(a, prompt, profil, inst):
     saknade = [k for k in korkort_som_krävs(a) if k not in inst.get("korkort", [])]
     if saknade:
@@ -161,42 +200,14 @@ def main():
         sys.exit(f"Hittar inte {PROFIL} – skapa den med din CV-text och dina projekt.")
     inst = las_installningar()
     profil = PROFIL.read_text(encoding="utf-8")
-    # Sållningen klarar sig med en kort profil (billigare) – breven använder hela.
-    kort = PRIVAT / "profil_kort.md"
-    profil_matchning = kort.read_text(encoding="utf-8") if kort.exists() else profil
-    prompt_matchning = (ROOT / "prompt_matchning.md").read_text(encoding="utf-8")
     prompt_brev = (ROOT / "prompt_brev.md").read_text(encoding="utf-8")
     prompt_granskning = (ROOT / "prompt_granskning.md").read_text(encoding="utf-8")
     sedda = las_sedda()
     idag = datetime.date.today().isoformat()
-    fel = []
 
     # 1. Hämta och bedöm nya annonser
-    nya = hamta_nya(inst, sedda, args.dagar)
-    print(f"{len(nya)} nya annonser att bedöma …")
-
-    def bedom_en(a):
-        try:
-            return a, bedom(a, prompt_matchning, profil_matchning, inst), None
-        except (DeepSeekFel, ValueError, KeyError) as e:
-            return a, None, e
-
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        resultat = list(ex.map(bedom_en, nya))
-
-    for a, b, e in resultat:
-        if e:
-            fel.append(f"{a.get('headline')} – {arbetsgivare(a)}: kunde inte bedömas ({e})")
-            continue
-        if b["sortera_bort"]:
-            status = "bortsorterad"
-        elif b["poang"] >= inst.get("min_poang", 7):
-            status = "vantar"
-        else:
-            status = "lag_poang"
-        sedda[a["id"]] = {"datum": idag, "rubrik": a.get("headline"), "arbetsgivare": arbetsgivare(a),
-                          "ort": ort(a), "sista_dag": (a.get("application_deadline") or "")[:10],
-                          "status": status, **b}
+    nya, poster, fel = bedom_nya(inst, sedda, args.dagar)
+    sedda.update(poster)
     spara_sedda(sedda)
 
     # 2. Skriv brev till de bästa matchningarna (även sådana som väntat sedan tidigare)
