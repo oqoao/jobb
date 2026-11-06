@@ -13,6 +13,7 @@ pip install requests
 export DEEPSEEK_API_KEY=sk-...
 python testa_brev.py "automation Borlänge" --antal 3
 python testa_brev.py --id 31591355        # one specific ad (the number in the Platsbanken link)
+python testa_brev.py --modell deepseek-chat   # faster, but follows the rules less well
 ```
 
 Letters are printed and saved to `private/brev/`. To change how the letters are written, edit `prompt_brev.md`.

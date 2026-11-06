@@ -84,7 +84,7 @@ def main():
     p.add_argument("sokord", nargs="?", default="automation Borlänge", help="fritext, t.ex. 'elektriker Falun'")
     p.add_argument("--antal", type=int, default=3)
     p.add_argument("--id", help="skriv brev till en specifik annons (id från Platsbanken-länken)")
-    p.add_argument("--modell", default="deepseek-chat")
+    p.add_argument("--modell", default="deepseek-reasoner", help="deepseek-reasoner (bäst) eller deepseek-chat (snabbare)")
     args = p.parse_args()
 
     if not PROFIL.exists():
