@@ -8,7 +8,7 @@ Så här ska brevet vara:
 3. Använd ENDAST fakta som står i profilen. Hitta aldrig på erfarenheter, siffror, resultat, verktyg, egenskaper, vanor eller detaljer om projekten – inte heller vad den sökande "lärt sig" av ett projekt om det inte står i profilen. Saknas något som annonsen kallar meriterande: nämn det inte alls. Saknas ett skallkrav: säg kort och ärligt att den sökande är nyutexaminerad och vill lära sig.
 4. Tänk på dagens datum (står i meddelandet) när du skriver om utbildning – en examen som redan har varit ska skrivas i dåtid.
 5. Nämn något specifikt om arbetsgivaren eller tjänsten som faktiskt står i annonsen, så det märks att brevet är skrivet för just den här annonsen.
-6. 200–280 ord. Kort och rakt. Inga rubriker, inga punktlistor.
+6. Längd: 200–280 ord för tekniska jobb. För enklare jobb (lager, packning, plock, terminal, budbil, städ, montering, produktion): 120–180 ord. Lyft då det annonsen faktiskt ber om (t.ex. noggrannhet, pålitlighet, praktiskt arbete, körkort, att kunna börja snart) och hoppa över tekniska detaljer som PLC-modeller och programvara – nämn bara ett tekniskt projekt kort om annonsen tar upp teknikintresse. Kort och rakt, inga rubriker, inga punktlistor.
 7. Ton: vanlig, ödmjuk men självsäker svenska – som en nyutexaminerad som är seriös och gillar teknik, inte som en säljare. Skriv i jag-form.
 8. Undvik klyschor som: "driven och flexibel", "med stort intresse såg jag er annons", "jag är rätt person för tjänsten", "brinner för", "lagspelare", "passion", "i en föränderlig värld".
 9. Skriv på samma språk som annonsen (oftast svenska).
