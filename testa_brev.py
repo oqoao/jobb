@@ -57,7 +57,8 @@ def skriv_brev(system_prompt, profil, annons, modell):
                       json={"model": modell,
                             "messages": [
                                 {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": f"# PROFIL\n{profil}\n\n# ANNONS\n{annons}"},
+                                {"role": "user", "content": f"Dagens datum: {datetime.date.today()}\n\n"
+                                                                f"# PROFIL\n{profil}\n\n# ANNONS\n{annons}"},
                             ]})
     if not r.ok:
         sys.exit(f"DeepSeek svarade {r.status_code}: {r.text[:500]}")
