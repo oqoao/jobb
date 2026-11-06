@@ -16,6 +16,7 @@ Steg 2 – ge en poäng 1–10 för hur bra annonsen passar (även om den sorter
 - 5–6: möjlig men lite långsökt.
 - 1–4: passar dåligt.
 Väg in hur väl uppgifterna matchar profilens kunskaper och intressen, och om annonsen välkomnar nyexaminerade eller erbjuder upplärning.
+Om ÖNSKEMÅL säger hur olika sorters jobb ska poängsättas, följ det – det går före skalan ovan.
 
 Skriv "skal" och "varfor" direkt till den sökande, med "du" (t.ex. "Passar dig eftersom …"), aldrig med namn eller "han/hon".
 
