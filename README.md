@@ -5,6 +5,8 @@ Finds jobs on Platsbanken (Arbetsförmedlingen), drops the ones you can't get, a
 ## Setup
 
 1. Put your CV text and your own projects in `private/profil.md`. The more concrete details, the better the letters. The `private/` folder is git-ignored, because this repo is public.
+   - Optional: `private/profil_kort.md` is a short version used only for sorting, which makes each sorting call about 30% smaller. Update it when you change `profil.md`.
+   - If you have a zip of an existing `private/` folder, unzip it into `private/`. It includes `sedda.json`, so the first run won't score every open ad again.
 2. Get an API key at <https://platform.deepseek.com> and put it in `private/deepseek_nyckel.txt` (or set `DEEPSEEK_API_KEY`).
 3. `pip install requests` (Python 3.11 or newer).
 

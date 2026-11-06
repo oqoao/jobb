@@ -161,6 +161,9 @@ def main():
         sys.exit(f"Hittar inte {PROFIL} – skapa den med din CV-text och dina projekt.")
     inst = las_installningar()
     profil = PROFIL.read_text(encoding="utf-8")
+    # Sållningen klarar sig med en kort profil (billigare) – breven använder hela.
+    kort = PRIVAT / "profil_kort.md"
+    profil_matchning = kort.read_text(encoding="utf-8") if kort.exists() else profil
     prompt_matchning = (ROOT / "prompt_matchning.md").read_text(encoding="utf-8")
     prompt_brev = (ROOT / "prompt_brev.md").read_text(encoding="utf-8")
     prompt_granskning = (ROOT / "prompt_granskning.md").read_text(encoding="utf-8")
@@ -174,7 +177,7 @@ def main():
 
     def bedom_en(a):
         try:
-            return a, bedom(a, prompt_matchning, profil, inst), None
+            return a, bedom(a, prompt_matchning, profil_matchning, inst), None
         except (DeepSeekFel, ValueError, KeyError) as e:
             return a, None, e
 
