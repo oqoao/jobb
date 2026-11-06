@@ -1,0 +1,4 @@
+# Personal data – never commit (this repo is public)
+private/
+.env
+__pycache__/
