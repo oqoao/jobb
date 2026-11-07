@@ -195,6 +195,13 @@ $("#kopiera").onclick = async () => {
   $("#kopiera").textContent = "Kopierat ✓";
 };
 $("#stang").onclick = () => $("#brevruta").close();
+// Kopiera alltid som ren text, så att sidans färger (t.ex. mörkt läge) inte följer med in i mejlet.
+document.addEventListener("copy", (e) => {
+  const markerat = window.getSelection().toString();
+  if (!markerat) return;
+  e.clipboardData.setData("text/plain", markerat);
+  e.preventDefault();
+});
 $("#uppdatera").onclick = uppdatera;
 
 visaLista().then(uppdatera);
