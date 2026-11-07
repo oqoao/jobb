@@ -115,6 +115,23 @@ function kort(a) {
   brevknapp.onclick = () => hamtaBrev(a, brevknapp, fel);
   const dolj = el("button", { className: "tyst", textContent: "Inte intressant", title: "Dölj annonsen för gott" });
   dolj.onclick = async () => { await post("/api/dolj/" + a.id); kortet.remove(); };
+  const omBedom = el("button", { className: "tyst", textContent: "Bedöm igen",
+                                 title: "Låt AI:n betygsätta annonsen på nytt mot din nuvarande profil" });
+  omBedom.onclick = async () => {
+    omBedom.disabled = true; omBedom.textContent = "Bedömer …"; fel.hidden = true;
+    try {
+      const svar = await post("/api/bedom/" + a.id);
+      const data = await svar.json();
+      if (!svar.ok) throw new Error(data.fel || svar.statusText);
+      await visaLista();
+      $("#status").textContent = data.borttagen ? `"${a.rubrik}" finns inte längre på Platsbanken.`
+        : `"${a.rubrik}" bedömdes om: ${data.status === "bortsorterad" ? "passar inte" : data.poang + "/10"} – ${data.varfor}`;
+      $("#status").scrollIntoView({ behavior: "smooth" });
+    } catch (err) {
+      fel.textContent = "Kunde inte bedöma om: " + err.message; fel.hidden = false;
+      omBedom.disabled = false; omBedom.textContent = "Bedöm igen";
+    }
+  };
   const meta = [a.arbetsgivare, a.ort, a.sista_dag && "sista dag " + a.sista_dag].filter(Boolean).join(" · ");
   const kortet = el("article", { className: "kort" },
     el("div", { className: "topp" }, bricka(a), el("h2", { textContent: a.rubrik }),
@@ -123,7 +140,8 @@ function kort(a) {
     a.varfor ? el("div", { className: "ai", textContent: a.varfor }) : null,
     a.saknas?.length ? el("div", { className: "saknas", textContent: "Saknas: " + a.saknas.join(", ") }) : null,
     el("div", { className: "knappar" }, brevknapp, visa,
-       el("a", { className: "lank", href: a.lank, target: "_blank", rel: "noopener", textContent: "Platsbanken ↗" }), dolj),
+       el("a", { className: "lank", href: a.lank, target: "_blank", rel: "noopener", textContent: "Platsbanken ↗" }),
+       omBedom, dolj),
     fel, text);
   return kortet;
 }

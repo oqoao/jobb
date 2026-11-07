@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 import requests
 
 import gemensamt as g
-from daglig import bedom_nya, las_installningar, las_sedda, spara_sedda
+from daglig import bedom, bedom_nya, las_installningar, las_matchning, las_sedda, spara_sedda, status_for
 
 SIDA = g.ROOT / "sida.html"
 sedda_las = threading.Lock()      # skyddar läs-ändra-spara av sedda.json
@@ -109,6 +109,37 @@ def skriv(annons_id):
     return {"brev": brev, "andringar": andringar or [], "fil": f"private/{relativ}"}
 
 
+def bedom_igen(annons_id):
+    """Betygsätter en annons på nytt mot nuvarande profil och inställningar."""
+    inst = las_installningar()
+    try:
+        a = g.hamta_annons(annons_id)
+    except requests.HTTPError as e:
+        if e.response is None or e.response.status_code != 404:
+            raise
+        with sedda_las:
+            sedda = las_sedda()
+            if annons_id in sedda:
+                sedda[annons_id]["status"] = "borttagen"
+                spara_sedda(sedda)
+        return {"borttagen": True}
+    b = bedom(a, *las_matchning(), inst)
+    with sedda_las:
+        sedda = las_sedda()
+        post = sedda.get(annons_id) or {
+            "datum": datetime.date.today().isoformat(), "rubrik": a.get("headline"),
+            "arbetsgivare": g.arbetsgivare(a), "ort": g.ort(a),
+            "sista_dag": (a.get("application_deadline") or "")[:10]}
+        behall = post.get("status") == "brev"  # ett skrivet brev ska inte försvinna ur listan
+        post.pop("dubbelkollad", None)
+        post.update(b)
+        post["status"] = "brev" if behall else status_for(b, inst)
+        sedda[annons_id] = post
+        spara_sedda(sedda)
+    return {"status": post["status"], "poang": b["poang"],
+            "varfor": b["skal"] if post["status"] == "bortsorterad" else b["varfor"]}
+
+
 def dolj(annons_id):
     with sedda_las:
         sedda = las_sedda()
@@ -140,6 +171,8 @@ class Hanterare(BaseHTTPRequestHandler):
             return self.kor(uppdatera)
         if vag.startswith("/api/brev/") and (i := vag.rsplit("/", 1)[1]).isdigit():
             return self.kor(lambda: skriv(i))
+        if vag.startswith("/api/bedom/") and (i := vag.rsplit("/", 1)[1]).isdigit():
+            return self.kor(lambda: bedom_igen(i))
         if vag.startswith("/api/dolj/") and (i := vag.rsplit("/", 1)[1]).isdigit():
             return self.kor(lambda: dolj(i))
         self.svara(404, b"Hittades inte", "text/plain; charset=utf-8")
@@ -151,6 +184,8 @@ class Hanterare(BaseHTTPRequestHandler):
             data, kod = {"fel": str(e)}, 502
         except requests.RequestException as e:
             data, kod = {"fel": f"Kunde inte nå Platsbanken: {e}"}, 502
+        except (ValueError, KeyError) as e:
+            data, kod = {"fel": f"Oväntat svar från AI:n: {e}"}, 502
         self.svara(kod, json.dumps(data, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
     def svara(self, kod, kropp, typ):

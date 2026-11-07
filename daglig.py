@@ -67,14 +67,24 @@ def hamta_nya(inst, sedda, dagar=None):
     return [a for i, a in unika.items() if i not in sedda]
 
 
+def las_matchning():
+    """Returnerar (prompt, profil) för betygsättningen. Sållningen klarar sig med den
+    korta profilen (billigare) om den finns – breven använder alltid hela."""
+    kort = PRIVAT / "profil_kort.md"
+    profil = (kort if kort.exists() else PROFIL).read_text(encoding="utf-8")
+    return (ROOT / "prompt_matchning.md").read_text(encoding="utf-8"), profil
+
+
+def status_for(b, inst):
+    if b["sortera_bort"]:
+        return "bortsorterad"
+    return "vantar" if b["poang"] >= inst.get("min_poang", 7) else "lag_poang"
+
+
 def bedom_nya(inst, sedda, dagar=None):
     """Hämtar annonser som inte bedömts än och låter AI:n bedöma dem.
     Returnerar (annonserna, nya poster till sedda.json, fel). Ändrar inte sedda."""
-    profil = PROFIL.read_text(encoding="utf-8")
-    # Sållningen klarar sig med en kort profil (billigare) – breven använder hela.
-    kort = PRIVAT / "profil_kort.md"
-    profil_matchning = kort.read_text(encoding="utf-8") if kort.exists() else profil
-    prompt = (ROOT / "prompt_matchning.md").read_text(encoding="utf-8")
+    prompt, profil_matchning = las_matchning()
     idag = datetime.date.today().isoformat()
 
     nya = hamta_nya(inst, sedda, dagar)
@@ -94,12 +104,7 @@ def bedom_nya(inst, sedda, dagar=None):
         if e:
             fel.append(f"{a.get('headline')} – {arbetsgivare(a)}: kunde inte bedömas ({e})")
             continue
-        if b["sortera_bort"]:
-            status = "bortsorterad"
-        elif b["poang"] >= inst.get("min_poang", 7):
-            status = "vantar"
-        else:
-            status = "lag_poang"
+        status = status_for(b, inst)
         poster[a["id"]] = {"datum": idag, "rubrik": a.get("headline"), "arbetsgivare": arbetsgivare(a),
                            "ort": ort(a), "sista_dag": (a.get("application_deadline") or "")[:10],
                            "status": status, **b}
