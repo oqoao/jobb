@@ -24,6 +24,8 @@ On each job you can:
 - **Skriv brev** writes a letter (about a minute) and shows it in a popup with a copy button. Once written, the button says **Visa brev** and opens the saved letter without spending tokens.
 - **Visa annons** shows the ad text.
 - **Inte intressant** hides the job for good.
+- **Sökt ✓** moves the job to the **Sökta** tab once you've applied. The ad text is saved, so you can still read it after the ad is removed from Platsbanken, and the letter stays one click away. **Ångra sökt** moves it back.
+- **Bedöm igen** re-rates the job against your current profile and settings.
 
 Ads already rated are never rated again, so opening the page costs nothing when there are no new ads. Close the black window to stop the page.
 

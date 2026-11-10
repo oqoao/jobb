@@ -29,8 +29,14 @@ uppdatering_las = threading.Lock()  # bara en sökning åt gången
 
 def lista():
     idag = datetime.date.today().isoformat()
-    annonser = []
+    annonser, sokta = [], []
     for i, s in las_sedda().items():
+        if s["status"] == "sokt":
+            sokta.append({
+                "id": i, "rubrik": s["rubrik"], "arbetsgivare": s["arbetsgivare"], "ort": s["ort"],
+                "sista_dag": s.get("sista_dag", ""), "sokt_datum": s.get("sokt_datum", ""),
+                "lank": f"https://arbetsformedlingen.se/platsbanken/annonser/{i}", "har_brev": bool(s.get("brev"))})
+            continue
         if s["status"] in ("dold", "borttagen") or (s.get("sista_dag") and s["sista_dag"] < idag):
             continue
         annonser.append({
@@ -41,7 +47,8 @@ def lista():
             "saknas": s.get("saknas", []), "har_brev": bool(s.get("brev")),
         })
     annonser.sort(key=lambda a: (-a["poang"], a["sista_dag"] or "9999"))
-    return {"annonser": annonser}
+    sokta.sort(key=lambda a: a["sokt_datum"], reverse=True)
+    return {"annonser": annonser, "sokta": sokta}
 
 
 def uppdatera():
@@ -59,6 +66,9 @@ def uppdatera():
 
 
 def annonstext(annons_id):
+    sparad = (las_sedda().get(annons_id) or {}).get("annonstext")
+    if sparad:
+        return {"text": sparad}
     try:
         a = g.hamta_annons(annons_id)
     except requests.HTTPError as e:
@@ -130,14 +140,47 @@ def bedom_igen(annons_id):
             "datum": datetime.date.today().isoformat(), "rubrik": a.get("headline"),
             "arbetsgivare": g.arbetsgivare(a), "ort": g.ort(a),
             "sista_dag": (a.get("application_deadline") or "")[:10]}
-        behall = post.get("status") == "brev"  # ett skrivet brev ska inte försvinna ur listan
+        behall = post.get("status") in ("brev", "sokt")  # brev och sökta jobb ska ligga kvar
         post.pop("dubbelkollad", None)
         post.update(b)
-        post["status"] = "brev" if behall else status_for(b, inst)
+        post["status"] = post["status"] if behall else status_for(b, inst)
         sedda[annons_id] = post
         spara_sedda(sedda)
     return {"status": post["status"], "poang": b["poang"],
             "varfor": b["skal"] if post["status"] == "bortsorterad" else b["varfor"]}
+
+
+def markera_sokt(annons_id):
+    """Flyttar jobbet till fliken Sökta och sparar annonstexten, så den finns kvar
+    även när annonsen tagits bort från Platsbanken."""
+    try:
+        text = (g.hamta_annons(annons_id).get("description") or {}).get("text") or ""
+    except requests.RequestException:
+        text = ""
+    with sedda_las:
+        sedda = las_sedda()
+        if annons_id not in sedda:
+            return {"ok": False}
+        post = sedda[annons_id]
+        post["status"] = "sokt"
+        post["sokt_datum"] = datetime.date.today().isoformat()
+        if text:
+            post["annonstext"] = text
+        spara_sedda(sedda)
+    return {"ok": True}
+
+
+def angra_sokt(annons_id):
+    with sedda_las:
+        sedda = las_sedda()
+        post = sedda.get(annons_id)
+        if post and post["status"] == "sokt":
+            post["status"] = "brev" if post.get("brev") else status_for(
+                {"sortera_bort": post.get("sortera_bort", False), "poang": post.get("poang", 0)},
+                las_installningar())
+            post.pop("sokt_datum", None)
+            spara_sedda(sedda)
+    return {"ok": True}
 
 
 def dolj(annons_id):
@@ -175,6 +218,10 @@ class Hanterare(BaseHTTPRequestHandler):
             return self.kor(lambda: bedom_igen(i))
         if vag.startswith("/api/dolj/") and (i := vag.rsplit("/", 1)[1]).isdigit():
             return self.kor(lambda: dolj(i))
+        if vag.startswith("/api/sokt/") and (i := vag.rsplit("/", 1)[1]).isdigit():
+            return self.kor(lambda: markera_sokt(i))
+        if vag.startswith("/api/angra-sokt/") and (i := vag.rsplit("/", 1)[1]).isdigit():
+            return self.kor(lambda: angra_sokt(i))
         self.svara(404, b"Hittades inte", "text/plain; charset=utf-8")
 
     def kor(self, funktion):

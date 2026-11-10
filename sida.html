@@ -46,6 +46,11 @@
   #bortsorterade { margin-top: 28px; }
   #bortsorterade > summary { cursor: pointer; color: var(--dampad); margin-bottom: 12px; }
   #bortsorterade .kort { opacity: .8; }
+  .flikar { display: flex; gap: 4px; border-bottom: 1px solid var(--kant); margin: 12px 0 16px; }
+  .flikar button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none;
+                   color: var(--dampad); font-weight: 600; padding: 8px 12px; }
+  .flikar button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tomt { color: var(--dampad); padding: 24px 0; }
   dialog { width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 48px); border: 1px solid var(--kant);
            border-radius: 12px; padding: 20px; background: var(--kort); color: var(--text); }
   dialog::backdrop { background: rgb(0 0 0 / .5); }
@@ -62,12 +67,21 @@
     <h1>Jobb för dig</h1>
     <button id="uppdatera">Leta efter nya annonser</button>
   </header>
-  <div id="status">Laddar …</div>
-  <div id="lista"></div>
-  <details id="bortsorterade" hidden>
-    <summary></summary>
-    <div id="bortlista"></div>
-  </details>
+  <nav class="flikar" role="tablist">
+    <button role="tab" id="tab-jobb" aria-selected="true">Jobb</button>
+    <button role="tab" id="tab-sokta" aria-selected="false">Sökta</button>
+  </nav>
+  <section id="flik-jobb">
+    <div id="status">Laddar …</div>
+    <div id="lista"></div>
+    <details id="bortsorterade" hidden>
+      <summary></summary>
+      <div id="bortlista"></div>
+    </details>
+  </section>
+  <section id="flik-sokta" hidden>
+    <div id="soktlista"></div>
+  </section>
 </main>
 
 <dialog id="brevruta">
@@ -132,6 +146,12 @@ function kort(a) {
       omBedom.disabled = false; omBedom.textContent = "Bedöm igen";
     }
   };
+  const sokt = el("button", { textContent: "Sökt ✓", title: "Flytta till fliken Sökta" });
+  sokt.onclick = async () => {
+    sokt.disabled = true; sokt.textContent = "Sparar …";
+    await post("/api/sokt/" + a.id);
+    await visaLista();
+  };
   const meta = [a.arbetsgivare, a.ort, a.sista_dag && "sista dag " + a.sista_dag].filter(Boolean).join(" · ");
   const kortet = el("article", { className: "kort" },
     el("div", { className: "topp" }, bricka(a), el("h2", { textContent: a.rubrik }),
@@ -141,9 +161,50 @@ function kort(a) {
     a.saknas?.length ? el("div", { className: "saknas", textContent: "Saknas: " + a.saknas.join(", ") }) : null,
     el("div", { className: "knappar" }, brevknapp, visa,
        el("a", { className: "lank", href: a.lank, target: "_blank", rel: "noopener", textContent: "Platsbanken ↗" }),
-       omBedom, dolj),
+       sokt, omBedom, dolj),
     fel, text);
   return kortet;
+}
+
+function annonsKnapp(a, text) {
+  const visa = el("button", { textContent: "Visa annons" });
+  visa.onclick = async () => {
+    if (!text.textContent) {
+      visa.disabled = true; visa.textContent = "Hämtar …";
+      try { text.textContent = (await (await fetch("/api/annons/" + a.id)).json()).text || "Ingen text."; }
+      catch { text.textContent = "Kunde inte hämta annonsen."; }
+      visa.disabled = false;
+    }
+    text.hidden = !text.hidden;
+    visa.textContent = text.hidden ? "Visa annons" : "Dölj annons";
+  };
+  return visa;
+}
+
+function soktKort(a) {
+  const text = el("div", { className: "annonstext", hidden: true });
+  const fel = el("div", { className: "fel", hidden: true });
+  const brevknapp = a.har_brev ? el("button", { className: "primar", textContent: "Visa brev" }) : null;
+  if (brevknapp) brevknapp.onclick = () => hamtaBrev(a, brevknapp, fel);
+  const angra = el("button", { className: "tyst", textContent: "Ångra sökt" });
+  angra.onclick = async () => { await post("/api/angra-sokt/" + a.id); await visaLista(); };
+  const meta = [a.arbetsgivare, a.ort, a.sokt_datum && "sökt " + a.sokt_datum,
+                a.sista_dag && "sista dag " + a.sista_dag].filter(Boolean).join(" · ");
+  return el("article", { className: "kort" },
+    el("div", { className: "topp" }, el("span", { className: "bricka bra", textContent: "Sökt" }),
+       el("h2", { textContent: a.rubrik })),
+    el("div", { className: "meta", textContent: meta }),
+    el("div", { className: "knappar" }, brevknapp, annonsKnapp(a, text),
+       el("a", { className: "lank", href: a.lank, target: "_blank", rel: "noopener", textContent: "Platsbanken ↗" }),
+       angra),
+    fel, text);
+}
+
+function visaFlik(namn) {
+  for (const f of ["jobb", "sokta"]) {
+    $("#flik-" + f).hidden = f !== namn;
+    $("#tab-" + f).setAttribute("aria-selected", String(f === namn));
+  }
 }
 
 async function visaLista() {
@@ -153,6 +214,9 @@ async function visaLista() {
   $("#lista").replaceChildren(...passar.map(kort));
   $("#bortlista").replaceChildren(...bort.map(kort));
   $("#bortsorterade").hidden = bort.length === 0;
+  $("#tab-sokta").textContent = `Sökta (${data.sokta.length})`;
+  $("#soktlista").replaceChildren(...(data.sokta.length ? data.sokta.map(soktKort)
+    : [el("div", { className: "tomt", textContent: "Inga sökta jobb än. Klicka \"Sökt ✓\" på ett jobb när du har skickat ansökan." })]));
   $("#bortsorterade > summary").textContent =
     `Sorterades bort – kräver erfarenhet, behörighet eller annat du inte har (${bort.length})`;
   return passar.length;
@@ -221,6 +285,8 @@ document.addEventListener("copy", (e) => {
   e.preventDefault();
 });
 $("#uppdatera").onclick = uppdatera;
+$("#tab-jobb").onclick = () => visaFlik("jobb");
+$("#tab-sokta").onclick = () => visaFlik("sokta");
 
 visaLista().then(uppdatera);
 </script>
